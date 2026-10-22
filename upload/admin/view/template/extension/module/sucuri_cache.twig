@@ -1,0 +1,204 @@
+{{ header }}{{ column_left }}
+<div id="content">
+  <div class="page-header">
+    <div class="container-fluid">
+      <div class="pull-right">
+        <button type="submit" form="form-sucuri-cache" data-toggle="tooltip" title="{{ button_save }}" class="btn btn-primary"><i class="fa fa-save"></i></button>
+        <a href="{{ cancel }}" data-toggle="tooltip" title="{{ button_cancel }}" class="btn btn-default"><i class="fa fa-reply"></i></a>
+      </div>
+      <h1>{{ heading_title }}</h1>
+      <ul class="breadcrumb">
+        {% for breadcrumb in breadcrumbs %}
+        <li><a href="{{ breadcrumb.href }}">{{ breadcrumb.text }}</a></li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  <div class="container-fluid">
+    {% if error_warning %}
+    <div class="alert alert-danger alert-dismissible"><i class="fa fa-exclamation-circle"></i> {{ error_warning }}
+      <button type="button" class="close" data-dismiss="alert">&times;</button>
+    </div>
+    {% endif %}
+
+    <div id="sucuri-alert"></div>
+
+    <div class="alert alert-info"><i class="fa fa-info-circle"></i> {{ text_static_note }}</div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-bolt"></i> {{ text_purge_all }}</h3>
+      </div>
+      <div class="panel-body">
+        <p class="text-muted">{{ text_purge_all_help }}</p>
+        <p><strong>{{ text_last_purge }}</strong> <span id="sucuri-last-purge">{{ last_purge }}</span></p>
+        <button type="button" id="button-purge-all" class="btn btn-danger"{% if not configured %} disabled{% endif %}><i class="fa fa-trash-o"></i> {{ button_purge_all }}</button>
+        {% if module_sucuri_cache_assets %}
+        <button type="button" id="button-purge-assets" class="btn btn-warning"{% if not configured %} disabled{% endif %}><i class="fa fa-file-code-o"></i> {{ button_purge_assets }}</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-files-o"></i> {{ text_purge_files }}</h3>
+      </div>
+      <div class="panel-body">
+        <p class="text-muted">{{ text_purge_files_help }}</p>
+        <div class="form-group">
+          <textarea name="files" id="input-files" rows="5" class="form-control" placeholder="catalog/view/theme/default/stylesheet/stylesheet.css"></textarea>
+        </div>
+        <button type="button" id="button-purge-files" class="btn btn-primary"{% if not configured %} disabled{% endif %}><i class="fa fa-eraser"></i> {{ button_purge_files }}</button>
+        <pre id="sucuri-report" class="hidden" style="margin-top:15px;"></pre>
+      </div>
+    </div>
+
+    <div class="panel panel-default">
+      <div class="panel-heading">
+        <h3 class="panel-title"><i class="fa fa-pencil"></i> {{ text_edit }}</h3>
+      </div>
+      <div class="panel-body">
+        <form action="{{ action }}" method="post" enctype="multipart/form-data" id="form-sucuri-cache" class="form-horizontal">
+          <fieldset>
+            <legend>{{ text_credentials }}</legend>
+            <p class="text-muted">{{ text_credentials_help }}</p>
+            {% if credentials_from_config %}
+            <div class="alert alert-warning"><i class="fa fa-lock"></i> {{ text_from_config }}</div>
+            {% endif %}
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="input-key">{{ entry_key }}</label>
+              <div class="col-sm-10">
+                <input type="text" name="module_sucuri_cache_key" value="{{ module_sucuri_cache_key }}" id="input-key" class="form-control" autocomplete="off"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="input-secret">{{ entry_secret }}</label>
+              <div class="col-sm-10">
+                <input type="password" name="module_sucuri_cache_secret" value="{{ module_sucuri_cache_secret }}" id="input-secret" class="form-control" autocomplete="off"/>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="col-sm-offset-2 col-sm-10">
+                <button type="button" id="button-test" class="btn btn-default"><i class="fa fa-plug"></i> {{ button_test }}</button>
+              </div>
+            </div>
+          </fieldset>
+          <fieldset>
+            <legend>{{ entry_assets }}</legend>
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="input-assets">{{ entry_assets }}</label>
+              <div class="col-sm-10">
+                <textarea name="module_sucuri_cache_assets" rows="6" id="input-assets" class="form-control">{{ module_sucuri_cache_assets }}</textarea>
+                <div class="help-block">{{ text_assets_help }}</div>
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="col-sm-2 control-label" for="input-status">{{ entry_status }}</label>
+              <div class="col-sm-10">
+                <select name="module_sucuri_cache_status" id="input-status" class="form-control">
+                  {% if module_sucuri_cache_status %}
+                  <option value="1" selected="selected">{{ text_enabled }}</option>
+                  <option value="0">{{ text_disabled }}</option>
+                  {% else %}
+                  <option value="1">{{ text_enabled }}</option>
+                  <option value="0" selected="selected">{{ text_disabled }}</option>
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+          </fieldset>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script type="text/javascript"><!--
+(function ($) {
+	function alertBox(type, message) {
+		$('#sucuri-alert').html('<div class="alert alert-' + type + ' alert-dismissible"><i class="fa fa-' + (type === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' + message + ' <button type="button" class="close" data-dismiss="alert">&times;</button></div>');
+		$('html, body').animate({scrollTop: 0}, 200);
+	}
+
+	function render(json) {
+		if (json['error']) {
+			alertBox('danger', json['error']);
+		} else if (json['warning']) {
+			alertBox('warning', json['warning']);
+		} else if (json['success']) {
+			alertBox('success', json['success']);
+		}
+
+		if (json['last_purge']) {
+			$('#sucuri-last-purge').text(json['last_purge']);
+		}
+
+		if (json['report']) {
+			$('#sucuri-report').removeClass('hidden').text(json['report']);
+		}
+	}
+
+	function post(button, url, data) {
+		var $button = $(button);
+		var html = $button.html();
+
+		$.ajax({
+			url: url,
+			type: 'post',
+			data: data,
+			dataType: 'json',
+			beforeSend: function () {
+				$button.prop('disabled', true).html('<i class="fa fa-circle-o-notch fa-spin"></i> {{ text_working|e("js") }}');
+			},
+			complete: function () {
+				$button.prop('disabled', false).html(html);
+			},
+			success: render,
+			error: function (xhr, status, error) {
+				// An HTML body here means OpenCart served a page instead of JSON -
+				// almost always the login page, i.e. the session expired or the
+				// user_token did not reach the server.
+				var body = (xhr.responseText || '').replace(/^\s+/, '');
+
+				if (body.charAt(0) === '<') {
+					alertBox('danger', 'Session expired or user_token missing - OpenCart returned an HTML page instead of JSON. Reload this page and try again.');
+				} else {
+					alertBox('danger', error || status);
+				}
+			}
+		});
+	}
+
+	// Endpoints are built by hand, NOT with url.link(): link() HTML-encodes the
+	// ampersands ("&amp;"), which is right inside an href but turns user_token
+	// into "amp;user_token" once the string is used in JavaScript - the request
+	// then arrives unauthenticated and OpenCart answers with the login page.
+	// The token is read from the address bar so no server-side encoding can
+	// reintroduce the bug; the Twig value is only a fallback.
+	function userToken() {
+		var match = window.location.search.match(/[?&]user_token=([^&]+)/);
+
+		return match ? decodeURIComponent(match[1]) : '{{ user_token }}';
+	}
+
+	function endpoint(method) {
+		return 'index.php?route=extension/module/sucuri_cache/' + method + '&user_token=' + encodeURIComponent(userToken());
+	}
+
+	$('#button-purge-all').on('click', function () {
+		post(this, endpoint('purge'), {});
+	});
+
+	$('#button-purge-assets').on('click', function () {
+		post(this, endpoint('purgeFiles'), {source: 'assets'});
+	});
+
+	$('#button-purge-files').on('click', function () {
+		post(this, endpoint('purgeFiles'), {files: $('#input-files').val()});
+	});
+
+	$('#button-test').on('click', function () {
+		post(this, endpoint('test'), {key: $('#input-key').val(), secret: $('#input-secret').val()});
+	});
+})(jQuery);
+//--></script>
+{{ footer }}
