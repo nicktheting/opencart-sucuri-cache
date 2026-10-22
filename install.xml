@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <modification>
-	<name>Sucuri Cache - admin menu entry</name>
+	<name>Sucuri Cache</name>
 	<code>sucuri_cache_menu</code>
-	<version>1.0.0</version>
+	<version>1.1.0</version>
 	<author>Nikos Tinginagkas</author>
 	<link></link>
 	<!--
@@ -22,6 +22,17 @@
 				);
 			}
 ]]></add>
+		</operation>
+	</file>
+	<!--
+		Sucuri Cache is an admin tool, not a storefront block. Keep it out of the
+		module list in Design > Layouts, where OpenCart would otherwise offer it
+		because the module has a status setting.
+	-->
+	<file path="admin/controller/design/layout.php">
+		<operation error="skip">
+			<search><![CDATA[if ($this->config->has('module_' . $code . '_status') || $module_data) {]]></search>
+			<add position="replace"><![CDATA[if (($this->config->has('module_' . $code . '_status') || $module_data) && $code != 'sucuri_cache') {]]></add>
 		</operation>
 	</file>
 </modification>

@@ -4,7 +4,7 @@ Purge the **Sucuri Website Firewall (CloudProxy)** edge cache from the OpenCart 
 
 Sucuri caches static files (js, css, png, jpg, jpeg, svg, gif, ico, txt, mp4, mp3, pdf, woff, ttf, swf, thumb, and in practice xml too) for 24 hours. It does this regardless of the Caching Level setting and rewrites `Cache-Control` to `max-age=86400`. A CSS/JS deploy on an unversioned URL therefore stays invisible to visitors for up to a day, unless the edge cache is purged.
 
-Built against the core branch [`opencart/opencart@3.0.x.x`](https://github.com/opencart/opencart/tree/3.0.x.x) (3.0.5.x). It should work on 3.0.3.x and later. No core files are edited: the only core touch is an OCMOD that adds a menu entry.
+Built against the core branch [`opencart/opencart@3.0.x.x`](https://github.com/opencart/opencart/tree/3.0.x.x) (3.0.5.x) and checked against the core code of 3.0.1.1 through 3.0.x.x. No core files are edited. The only core touch is an OCMOD that adds a menu entry and keeps the module out of Design → Layouts.
 
 ## Features
 
@@ -13,13 +13,16 @@ Built against the core branch [`opencart/opencart@3.0.x.x`](https://github.com/o
 - **Asset list**: a saved list of files (e.g. theme CSS/JS) that you can purge with one button.
 - **Test credentials**: a read-only `show_settings` call that does not touch the cache.
 - **CLI script** for cron and deploy hooks, with exit codes.
+- **Status switch**: when the module is disabled, no purge runs, from the admin or from the CLI.
+- The API secret is never written into the admin page. Leave the field empty to keep the saved one.
 - Rate-limit aware: HTTP 429 and `Retry-After` are reported back to the user.
 - Every action is logged to the OpenCart error log, prefixed with `Sucuri WAF:`.
 - Admin language: `en-gb`. For another language, copy `admin/language/en-gb/extension/module/sucuri_cache.php` into that language's folder and translate it.
 
 ## Requirements
 
-- OpenCart 3.0.x (PHP version as required by your OpenCart build; 3.0.5.x needs PHP 8.1+)
+- OpenCart 3.0.1.1 or later (3.0.0.0 lacks `DIR_STORAGE`)
+- PHP 7.0 or later, or whatever your OpenCart build requires (3.0.5.x needs PHP 8.1+). Tested for PHP 8.5 deprecations.
 - PHP cURL extension
 - A site behind the Sucuri Firewall, and its API key/secret (Sucuri dashboard → Firewall → your site → Settings → API)
 
@@ -31,12 +34,12 @@ Built against the core branch [`opencart/opencart@3.0.x.x`](https://github.com/o
 2. Admin → Extensions → Installer → upload the zip.
 3. Extensions → Modifications → **Refresh**. This step adds the menu entry.
 4. Extensions → Extensions → Modules → **Sucuri Cache** → Install → Edit.
-5. Enter the API key and secret, click **Test credentials**, then **Save**.
+5. Enter the API key and secret, click **Test credentials**, then **Save**. Status is Enabled after install.
 
 ### Option B: Manual
 
 1. Copy the contents of `upload/` into the OpenCart root.
-2. Upload `install.xml` under Extensions → Installer, or skip it if you don't want the menu entry. Then go to Modifications → **Refresh**.
+2. Rename `install.xml` to `sucuri_cache.ocmod.xml` and upload it under Extensions → Installer (the Installer only accepts `.ocmod.xml` / `.ocmod.zip`). Then go to Modifications → **Refresh**. Skip this step if you want neither the menu entry nor the Layouts fix.
 3. Carry on from step 4 above.
 
 On install, the module grants the `access`/`modify` permission to the installing user's group, as every OpenCart extension does. Grant it to other groups under System → Users → User Groups.
@@ -129,7 +132,8 @@ and in `header.twig`: `stylesheet.css?v={{ css_version }}`.
 ## Files
 
 ```
-install.xml                                            OCMOD: System > Maintenance > Sucuri Cache
+install.xml                                            OCMOD: menu entry under System > Maintenance,
+                                                       and hides the module from Design > Layouts
 upload/admin/controller/extension/module/sucuri_cache.php
 upload/admin/language/en-gb/extension/module/sucuri_cache.php
 upload/admin/view/template/extension/module/sucuri_cache.twig
