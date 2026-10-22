@@ -64,7 +64,8 @@ function sucuri_settings() {
 
 	if ($result) {
 		while ($row = mysqli_fetch_assoc($result)) {
-			$settings[$row['key']] = $row['value'];
+			// Values saved from an OpenCart form are HTML-escaped ("&" -> "&amp;").
+			$settings[$row['key']] = html_entity_decode($row['value'], ENT_QUOTES, 'UTF-8');
 		}
 
 		mysqli_free_result($result);
@@ -99,6 +100,14 @@ function sucuri_log($action, array $result, array $settings) {
 }
 
 $settings = sucuri_settings();
+
+// Status "Disabled" in the admin module stops the CLI too. A store that never
+// installed the module (credentials from config.php or the environment) has
+// no status setting at all and is not affected.
+if (isset($settings['module_sucuri_cache_status']) && !$settings['module_sucuri_cache_status']) {
+	fwrite(STDERR, "The Sucuri Cache module is disabled in the admin.\n");
+	exit(1);
+}
 
 if (defined('SUCURI_WAF_KEY') && SUCURI_WAF_KEY !== '') {
 	$key    = SUCURI_WAF_KEY;

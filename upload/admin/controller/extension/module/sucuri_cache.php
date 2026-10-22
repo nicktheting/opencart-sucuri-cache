@@ -20,7 +20,7 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 		$this->load->model('setting/setting');
 
 		$this->model_setting_setting->editSetting('module_sucuri_cache', array(
-			'module_sucuri_cache_status' => 0
+			'module_sucuri_cache_status' => 1
 		));
 	}
 
@@ -37,7 +37,15 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 		$this->document->setTitle($this->language->get('heading_title'));
 
 		if (($this->request->server['REQUEST_METHOD'] == 'POST') && $this->validate()) {
-			$this->model_setting_setting->editSetting('module_sucuri_cache', $this->request->post);
+			$post = $this->request->post;
+
+			// The secret is never sent back to the browser, so an empty field
+			// means "keep the stored one".
+			if (!isset($post['module_sucuri_cache_secret']) || $post['module_sucuri_cache_secret'] === '') {
+				$post['module_sucuri_cache_secret'] = (string)$this->config->get('module_sucuri_cache_secret');
+			}
+
+			$this->model_setting_setting->editSetting('module_sucuri_cache', $post);
 
 			$this->session->data['success'] = $this->language->get('text_success');
 
@@ -46,7 +54,7 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 
 		$data = array();
 
-		foreach (array('heading_title', 'text_edit', 'text_enabled', 'text_disabled', 'text_purge_all', 'text_purge_all_help', 'text_purge_files', 'text_purge_files_help', 'text_assets_help', 'text_credentials', 'text_credentials_help', 'text_from_config', 'text_never', 'text_last_purge', 'text_static_note', 'text_working', 'entry_status', 'entry_key', 'entry_secret', 'entry_assets', 'entry_files', 'button_purge_all', 'button_purge_files', 'button_purge_assets', 'button_test', 'button_save', 'button_cancel') as $key) {
+		foreach (array('heading_title', 'text_edit', 'text_enabled', 'text_disabled', 'text_purge_all', 'text_purge_all_help', 'text_purge_files', 'text_purge_files_help', 'text_assets_help', 'text_credentials', 'text_credentials_help', 'text_from_config', 'text_never', 'text_last_purge', 'text_static_note', 'text_working', 'text_secret_saved', 'text_status_help', 'error_disabled', 'entry_status', 'entry_key', 'entry_secret', 'entry_assets', 'entry_files', 'button_purge_all', 'button_purge_files', 'button_purge_assets', 'button_test', 'button_save', 'button_cancel') as $key) {
 			$data[$key] = $this->language->get($key);
 		}
 
@@ -80,11 +88,17 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 		// URLs by hand from user_token, the same way OpenCart core does.
 		$data['user_token'] = $this->session->data['user_token'];
 
-		foreach (array('status', 'key', 'secret', 'assets') as $field) {
+		foreach (array('status', 'key', 'assets') as $field) {
 			$name = 'module_sucuri_cache_' . $field;
 
 			$data[$name] = isset($this->request->post[$name]) ? $this->request->post[$name] : $this->config->get($name);
 		}
+
+		// Never render the stored secret into the page source; the field stays
+		// empty and only says whether one is saved.
+		$data['secret_saved'] = (string)$this->config->get('module_sucuri_cache_secret') !== '';
+
+		$data['enabled'] = (bool)$this->config->get('module_sucuri_cache_status');
 
 		// Credentials pinned in admin/config.php win over the stored settings.
 		$data['credentials_from_config'] = defined('SUCURI_WAF_KEY') && SUCURI_WAF_KEY !== '';
@@ -115,6 +129,8 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 		try {
 			if (!$this->user->hasPermission('modify', 'extension/module/sucuri_cache')) {
 				$json['error'] = $this->language->get('error_permission');
+			} elseif (!$this->config->get('module_sucuri_cache_status')) {
+				$json['error'] = $this->language->get('error_disabled');
 			} else {
 				$client = $this->getClient();
 
@@ -156,6 +172,8 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 		try {
 			if (!$this->user->hasPermission('modify', 'extension/module/sucuri_cache')) {
 				$json['error'] = $this->language->get('error_permission');
+			} elseif (!$this->config->get('module_sucuri_cache_status')) {
+				$json['error'] = $this->language->get('error_disabled');
 			} else {
 				$client = $this->getClient();
 
@@ -212,8 +230,15 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 				$json['error'] = $this->language->get('error_permission');
 			} else {
 				// Test what is typed in the form, falling back to what is stored.
-				$key    = isset($this->request->post['key']) ? $this->request->post['key'] : '';
-				$secret = isset($this->request->post['secret']) ? $this->request->post['secret'] : '';
+				$key    = isset($this->request->post['key']) ? $this->decode($this->request->post['key']) : '';
+				$secret = isset($this->request->post['secret']) ? $this->decode($this->request->post['secret']) : '';
+
+				// The secret field is left empty on purpose (see index()); test the
+				// typed key against the stored secret, unless the key is the
+				// combined "KEY/SECRET" form.
+				if ($key !== '' && $secret === '' && strpos($key, '/') === false) {
+					$secret = $this->decode($this->config->get('module_sucuri_cache_secret'));
+				}
 
 				$client = ($key !== '') ? new SucuriWafClient($key, $secret, $this->stateFile()) : $this->getClient();
 
@@ -249,7 +274,16 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 			$raw = isset($this->request->post['files']) ? (string)$this->request->post['files'] : '';
 		}
 
-		return array_values(array_filter(array_map('trim', preg_split('/\R/', $raw))));
+		return array_values(array_filter(array_map('trim', preg_split('/\R/', $this->decode($raw)))));
+	}
+
+	/**
+	 * OpenCart HTML-escapes every request value (and so everything saved from
+	 * a form), which would turn "a.css?v=1&b=2" into "a.css?v=1&amp;b=2"
+	 * before it reaches the Sucuri API.
+	 */
+	private function decode($value) {
+		return html_entity_decode((string)$value, ENT_QUOTES, 'UTF-8');
 	}
 
 	/**
@@ -274,8 +308,8 @@ class ControllerExtensionModuleSucuriCache extends Controller {
 			$key    = SUCURI_WAF_KEY;
 			$secret = defined('SUCURI_WAF_SECRET') ? SUCURI_WAF_SECRET : '';
 		} else {
-			$key    = (string)$this->config->get('module_sucuri_cache_key');
-			$secret = (string)$this->config->get('module_sucuri_cache_secret');
+			$key    = $this->decode($this->config->get('module_sucuri_cache_key'));
+			$secret = $this->decode($this->config->get('module_sucuri_cache_secret'));
 		}
 
 		return new SucuriWafClient($key, $secret, $this->stateFile());

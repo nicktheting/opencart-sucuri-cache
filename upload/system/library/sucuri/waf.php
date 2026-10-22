@@ -228,7 +228,11 @@ class SucuriWafClient {
 		$body     = curl_exec($curl);
 		$http     = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
 		$curl_err = curl_error($curl);
-		curl_close($curl);
+
+		// curl_close() has been a no-op since PHP 8.0 and is deprecated in 8.5.
+		if (PHP_VERSION_ID < 80000) {
+			curl_close($curl);
+		}
 
 		if ($body === false) {
 			return $this->result(false, 0, array('Connection to waf.sucuri.net failed: ' . $curl_err), $http);

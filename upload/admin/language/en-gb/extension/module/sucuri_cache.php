@@ -23,6 +23,8 @@ $_['text_purged_files_partial'] = 'Warning: only %d of %d file(s) were purged - 
 $_['text_skipped']              = 'SKIPPED %s - over the 10 files per run limit, purge it in the next run.';
 $_['text_test_ok']              = 'Success: the API credentials are valid.';
 $_['text_working']              = 'Working...';
+$_['text_secret_saved']         = 'Saved - leave empty to keep it';
+$_['text_status_help']          = 'When disabled, no purge runs from the admin or the CLI script.';
 
 // Entry
 $_['entry_status']              = 'Status';
@@ -41,5 +43,6 @@ $_['button_test']               = 'Test credentials';
 $_['error_permission']          = 'Warning: You do not have permission to modify the Sucuri Cache module!';
 $_['error_credentials']         = 'Warning: the Sucuri API key and secret are not configured.';
 $_['error_files']               = 'Warning: no files given.';
+$_['error_disabled']            = 'Warning: the Sucuri Cache module is disabled. Set Status to Enabled and save to purge.';
 $_['error_rate_limit']          = 'Rate limit reached, retry in %d seconds.';
 $_['error_unknown']             = 'Sucuri returned an unknown error.';

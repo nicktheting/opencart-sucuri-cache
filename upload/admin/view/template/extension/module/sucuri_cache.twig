@@ -23,6 +23,10 @@
 
     <div id="sucuri-alert"></div>
 
+    {% if not enabled %}
+    <div class="alert alert-warning"><i class="fa fa-exclamation-triangle"></i> {{ error_disabled }}</div>
+    {% endif %}
+
     <div class="alert alert-info"><i class="fa fa-info-circle"></i> {{ text_static_note }}</div>
 
     <div class="panel panel-default">
@@ -32,9 +36,9 @@
       <div class="panel-body">
         <p class="text-muted">{{ text_purge_all_help }}</p>
         <p><strong>{{ text_last_purge }}</strong> <span id="sucuri-last-purge">{{ last_purge }}</span></p>
-        <button type="button" id="button-purge-all" class="btn btn-danger"{% if not configured %} disabled{% endif %}><i class="fa fa-trash-o"></i> {{ button_purge_all }}</button>
+        <button type="button" id="button-purge-all" class="btn btn-danger"{% if not configured or not enabled %} disabled{% endif %}><i class="fa fa-trash-o"></i> {{ button_purge_all }}</button>
         {% if module_sucuri_cache_assets %}
-        <button type="button" id="button-purge-assets" class="btn btn-warning"{% if not configured %} disabled{% endif %}><i class="fa fa-file-code-o"></i> {{ button_purge_assets }}</button>
+        <button type="button" id="button-purge-assets" class="btn btn-warning"{% if not configured or not enabled %} disabled{% endif %}><i class="fa fa-file-code-o"></i> {{ button_purge_assets }}</button>
         {% endif %}
       </div>
     </div>
@@ -48,7 +52,7 @@
         <div class="form-group">
           <textarea name="files" id="input-files" rows="5" class="form-control" placeholder="catalog/view/theme/default/stylesheet/stylesheet.css"></textarea>
         </div>
-        <button type="button" id="button-purge-files" class="btn btn-primary"{% if not configured %} disabled{% endif %}><i class="fa fa-eraser"></i> {{ button_purge_files }}</button>
+        <button type="button" id="button-purge-files" class="btn btn-primary"{% if not configured or not enabled %} disabled{% endif %}><i class="fa fa-eraser"></i> {{ button_purge_files }}</button>
         <pre id="sucuri-report" class="hidden" style="margin-top:15px;"></pre>
       </div>
     </div>
@@ -74,7 +78,7 @@
             <div class="form-group">
               <label class="col-sm-2 control-label" for="input-secret">{{ entry_secret }}</label>
               <div class="col-sm-10">
-                <input type="password" name="module_sucuri_cache_secret" value="{{ module_sucuri_cache_secret }}" id="input-secret" class="form-control" autocomplete="off"/>
+                <input type="password" name="module_sucuri_cache_secret" value="" placeholder="{{ secret_saved ? text_secret_saved : '' }}" id="input-secret" class="form-control" autocomplete="new-password"/>
               </div>
             </div>
             <div class="form-group">
@@ -104,6 +108,7 @@
                   <option value="0" selected="selected">{{ text_disabled }}</option>
                   {% endif %}
                 </select>
+                <div class="help-block">{{ text_status_help }}</div>
               </div>
             </div>
           </fieldset>
