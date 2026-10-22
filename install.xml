@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<modification>
+	<name>Sucuri Cache - admin menu entry</name>
+	<code>sucuri_cache_menu</code>
+	<version>1.0.0</version>
+	<author>Nikos Tinginagkas</author>
+	<link></link>
+	<!--
+		Adds "Sucuri Cache" under System > Maintenance, so a post-deploy edge
+		purge does not require digging through Extensions > Modules. The label
+		is a proper noun, identical in every language, so it needs no language key.
+	-->
+	<file path="admin/controller/common/column_left.php">
+		<operation>
+			<search><![CDATA[if ($maintenance) {]]></search>
+			<add position="before"><![CDATA[
+			if ($this->user->hasPermission('access', 'extension/module/sucuri_cache')) {
+				$maintenance[] = array(
+					'name'	   => 'Sucuri Cache',
+					'href'     => $this->url->link('extension/module/sucuri_cache', 'user_token=' . $this->session->data['user_token'], true),
+					'children' => array()
+				);
+			}
+]]></add>
+		</operation>
+	</file>
+</modification>
